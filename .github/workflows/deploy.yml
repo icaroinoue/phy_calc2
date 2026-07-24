@@ -1,0 +1,33 @@
+name: Build WASM and Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.61
+
+      - name: Compile C++ core to WebAssembly
+        run: |
+          emcc src/physics_core.cpp -O2 \
+            -s WASM=1 \
+            -s EXPORTED_FUNCTIONS="['_potentialEnergy','_kineticEnergy','_springEnergy']" \
+            -s EXPORTED_RUNTIME_METHODS="['cwrap']" \
+            -s ENVIRONMENT=web \
+            -o web/physics.js
+
+      - name: Deploy web/ to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web
