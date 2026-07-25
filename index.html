@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calc. de Energia Mecânica — C++ / WebAssembly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- CABEÇALHO -->
+  <header class="sheet-header">
+    <div class="header-left">
+      <span class="eyebrow">MECÂNICA CLÁSSICA / ENERGIA</span>
+      <h1>Calculadora de Energia Mecânica</h1>
+      <p class="subtitle">Núcleo de cálculo em C++ compilado para WebAssembly — roda inteiramente no navegador.</p>
+    </div>
+    <div class="header-right">
+      <div class="status-led" id="wasm-status">
+        <span class="dot"></span>
+        <span id="wasm-status-text">carregando núcleo…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ÁREA PRINCIPAL -->
+  <main class="board">
+
+    <!-- PAINEL DE CONTROLE -->
+    <section class="panel controls">
+      <h2 class="panel-title">01 · Entrada</h2>
+
+      <label class="field">
+        <span>Fórmula</span>
+        <select id="formula-select">
+          <option value="A">Energia Potencial — E = m · g · h</option>
+          <option value="C">Energia Cinética — E = m · v² / 2</option>
+          <option value="M">Energia Elástica (mola) — E = k · x² / 2</option>
+        </select>
+      </label>
+
+      <div id="inputs-A" class="formula-inputs">
+        <label class="field"><span>massa (m) — kg</span><input type="number" id="A-m" value="2" step="any"></label>
+        <label class="field"><span>gravidade (g) — m/s²</span><input type="number" id="A-g" value="9.8" step="any"></label>
+        <label class="field"><span>altura (h) — m</span><input type="number" id="A-h" value="5" step="any"></label>
+      </div>
+
+      <div id="inputs-C" class="formula-inputs hidden">
+        <label class="field"><span>massa (m) — kg</span><input type="number" id="C-m" value="2" step="any"></label>
+        <label class="field"><span>velocidade (v) — m/s</span><input type="number" id="C-v" value="10" step="any"></label>
+      </div>
+
+      <div id="inputs-M" class="formula-inputs hidden">
+        <label class="field"><span>const. elástica (k) — N/m</span><input type="number" id="M-k" value="40000" step="any"></label>
+        <label class="field"><span>deformação (x) — m</span><input type="number" id="M-x" value="0.1" step="any"></label>
+      </div>
+
+      <button id="calc-btn" class="calc-btn">Calcular →</button>
+    </section>
+
+    <!-- DIAGRAMA TÉCNICO -->
+    <section class="panel diagram">
+      <h2 class="panel-title">02 · Diagrama</h2>
+      <div class="diagram-canvas">
+        <svg id="diagram-A" class="diagram-svg" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowA" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--line-bright)"/>
+            </marker>
+          </defs>
+          <line x1="20" y1="210" x2="300" y2="210" stroke="var(--line)" stroke-width="1.5"/>
+          <g id="hatch-ground"></g>
+          <rect id="mass-block-A" x="60" y="60" width="34" height="34" fill="none" stroke="var(--line-bright)" stroke-width="2"/>
+          <text x="77" y="82" text-anchor="middle" class="lbl-block">m</text>
+          <line id="dim-h" x1="140" y1="94" x2="140" y2="210" stroke="var(--line-bright)" stroke-width="1" stroke-dasharray="4 4" marker-start="url(#arrowA)" marker-end="url(#arrowA)"/>
+          <text id="dim-h-label" x="152" y="155" class="lbl-dim">h</text>
+          <text x="20" y="235" class="lbl-caption">FIG. 01 — QUEDA LIVRE / ALTURA DE REFERÊNCIA</text>
+        </svg>
+
+        <svg id="diagram-C" class="diagram-svg hidden" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowC" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent-amber)"/>
+            </marker>
+          </defs>
+          <line x1="20" y1="180" x2="300" y2="180" stroke="var(--line)" stroke-width="1.5"/>
+          <rect x="90" y="146" width="34" height="34" fill="none" stroke="var(--line-bright)" stroke-width="2"/>
+          <text x="107" y="168" text-anchor="middle" class="lbl-block">m</text>
+          <line x1="20" y1="120" x2="70" y2="120" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 4"/>
+          <line id="vec-v" x1="128" y1="163" x2="210" y2="163" stroke="var(--accent-amber)" stroke-width="2" marker-end="url(#arrowC)"/>
+          <text id="vec-v-label" x="165" y="150" text-anchor="middle" class="lbl-dim">v</text>
+          <text x="20" y="235" class="lbl-caption">FIG. 02 — CORPO EM MOVIMENTO RETILÍNEO</text>
+        </svg>
+
+        <svg id="diagram-M" class="diagram-svg hidden" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+          <line x1="30" y1="40" x2="30" y2="180" stroke="var(--line)" stroke-width="3"/>
+          <g id="wall-hatch"></g>
+          <polyline id="spring-coil" points="" fill="none" stroke="var(--line-bright)" stroke-width="2"/>
+          <rect id="mass-block-M" x="0" y="0" width="30" height="30" fill="none" stroke="var(--line-bright)" stroke-width="2"/>
+          <line x1="20" y1="200" x2="300" y2="200" stroke="var(--line)" stroke-width="1.5"/>
+          <line id="dim-x" x1="0" y1="0" x2="0" y2="0" stroke="var(--accent-amber)" stroke-width="1" stroke-dasharray="4 4"/>
+          <text id="dim-x-label" x="0" y="0" class="lbl-dim">x</text>
+          <text x="20" y="235" class="lbl-caption">FIG. 03 — COMPRESSÃO DE MOLA IDEAL</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- LEITURA / RESULTADO -->
+    <section class="panel readout">
+      <h2 class="panel-title">03 · Resultado</h2>
+
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 200 110" class="gauge">
+          <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="var(--line)" stroke-width="2"/>
+          <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="var(--grid-line)" stroke-width="14"/>
+          <line id="needle" x1="100" y1="100" x2="100" y2="20" stroke="var(--accent-amber)" stroke-width="3" stroke-linecap="round" style="transform-origin: 100px 100px;"/>
+          <circle cx="100" cy="100" r="5" fill="var(--accent-amber)"/>
+        </svg>
+      </div>
+
+      <div class="readout-value">
+        <span id="result-value">0.00</span>
+        <span class="unit">J</span>
+      </div>
+      <p id="result-formula" class="readout-formula">E = m · g · h</p>
+    </section>
+
+  </main>
+
+  <!-- TITLE BLOCK (rodapé estilo prancha de engenharia) -->
+  <footer class="titleblock">
+    <div class="tb-cell"><span class="tb-label">SISTEMA</span><span class="tb-value">Energia Mecânica</span></div>
+    <div class="tb-cell"><span class="tb-label">NÚCLEO</span><span class="tb-value">C++17 → WASM</span></div>
+    <div class="tb-cell"><span class="tb-label">UNIDADE</span><span class="tb-value">SI (Joule)</span></div>
+    <div class="tb-cell"><span class="tb-label">REV</span><span class="tb-value">1.0</span></div>
+    <div class="tb-cell tb-repo"><span class="tb-label">REPOSITÓRIO</span><span class="tb-value">github.com/SEU-USUARIO/mech-calc</span></div>
+  </footer>
+
+</div>
+
+<!-- app.js define window.Module ANTES de physics.js ser carregado,
+     pois o glue code do Emscripten reaproveita um Module global se já existir. -->
+<script src="app.js"></script>
+<script src="physics.js"></script>
+</body>
+</html>
